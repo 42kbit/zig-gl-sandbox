@@ -1,0 +1,16 @@
+.{
+    .name = .zig_gl_sandbox,
+
+    .version = "0.0.0",
+
+    .fingerprint = 0xa9e5ce00e725d127, // Changing this has security and trust implications.
+
+    .minimum_zig_version = "0.14.1",
+    .dependencies = .{},
+
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}
