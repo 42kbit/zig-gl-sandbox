@@ -4,6 +4,8 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    // I took the build script parts from zglfw
+    // https://github.com/IridescenceTech/zglfw
     const exe = b.addExecutable(.{
         .name = "gl-sandbox",
         .root_source_file = b.path("src/main.zig"),
