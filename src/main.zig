@@ -1,12 +1,33 @@
 const std = @import("std");
+const glfw = @import("zglfw");
 
-extern "glfw" fn glfwGetVersion(major: *c_int, minor: *c_int, rev: *c_int) callconv(.C) void;
+extern fn glGetString(c_int) [*c]const u8;
 
 pub fn main() !void {
-    var major: c_int = undefined;
-    var minor: c_int = undefined;
-    var rev: c_int = undefined;
+    var major: i32 = 0;
+    var minor: i32 = 0;
+    var rev: i32 = 0;
 
-    glfwGetVersion(&major, &minor, &rev);
-    std.debug.print("Running GLFW {d}.{d}.{d}...!\n", .{ major, minor, rev });
+    glfw.getVersion(&major, &minor, &rev);
+    std.debug.print("GLFW {}.{}.{}\n", .{ major, minor, rev });
+
+    //Example of something that fails with GLFW_NOT_INITIALIZED - but will continue with execution
+    //var monitor: ?*glfw.Monitor = glfw.getPrimaryMonitor();
+
+    try glfw.init();
+    defer glfw.terminate();
+    std.debug.print("GLFW Init Succeeded.\n", .{});
+
+    const window: *glfw.Window = try glfw.createWindow(800, 640, "Hello World", null, null);
+    defer glfw.destroyWindow(window);
+
+    glfw.makeContextCurrent(window);
+
+    while (!glfw.windowShouldClose(window)) {
+        if (glfw.getKey(window, glfw.KeyEscape) == glfw.Press) {
+            glfw.setWindowShouldClose(window, true);
+        }
+
+        glfw.pollEvents();
+    }
 }
