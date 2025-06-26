@@ -168,7 +168,6 @@ pub fn main() !void {
         [_]f32{ -0.5, -0.5, 0.0 },
         [_]f32{ 0.5, -0.5, 0.0 },
         [_]f32{ 0.0, 0.5, 0.0 },
-        [_]f32{ 1.0, 1.0, 0.0 },
     };
     const verts_len: comptime_int = verticies.len * verticies[0].len;
     // Cast "verticies" to a 1D array
