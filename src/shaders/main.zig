@@ -298,6 +298,9 @@ pub fn main() !void {
         shader_program,
         "uTime",
     );
+    if (location == -1) {
+        @panic("Uniform variable 'uTime' not found in shader program");
+    }
 
     while (!glfw.windowShouldClose(window)) {
         const frame_start = timer.read();
