@@ -6,30 +6,41 @@ const gl = @import("gl");
 var gl_procs: gl.ProcTable = undefined;
 
 const glsl_vertex_shader =
-    \\#version 330 core
+    \\#version 430 core
     \\layout (location = 0) in vec3 aPos;
     \\layout (location = 1) in vec3 aColor;
     \\
     \\out vec3 vertexColor;
     \\
+    \\uniform double uTime;
+    \\
     \\void main()
     \\{
     \\    vertexColor = aColor;
-    \\    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    \\    // cast 64 bit float to 32 bit float
+    \\    float y_pos = aPos.y + sin(float(uTime)) * 0.2; // animate y position with time
+    \\    gl_Position = vec4(aPos.x, y_pos, aPos.z, 1.0);
     \\}
     \\
 ;
 
 const glsl_fragment_shader =
-    \\#version 330 core
+    \\#version 430 core
     \\out vec4 FragColor;
+    \\
+    \\uniform double uTime;
     \\
     \\// Name should match the output from vertex shader
     \\in vec3 vertexColor;
     \\
     \\void main()
     \\{
-    \\  FragColor = vec4(vertexColor, 1.0);
+    \\  // animate color with time
+    \\  float red = abs(vertexColor.x * sin(float(uTime)));
+    \\  float green = abs(vertexColor.y * sin(float(uTime)));
+    \\  float blue = abs(vertexColor.z * sin(float(uTime)));
+    \\  vec3 newColor = vec3(red, green, blue);
+    \\  FragColor = vec4(newColor, 1.0);
     \\}
     \\
 ;
@@ -248,8 +259,6 @@ pub fn main() !void {
         panicOnProgramLinkError(std.heap.page_allocator, shader_program);
     }
 
-    gl.UseProgram(shader_program);
-
     var vao: gl.uint = undefined;
     gl.GenVertexArrays(1, @ptrCast(&vao));
     defer gl.DeleteVertexArrays(1, @ptrCast(&vao));
@@ -283,6 +292,13 @@ pub fn main() !void {
         3 * @sizeOf(f32),
     );
 
+    // Get the location of the uniform variable in the shader program
+    // does not requrie binding the shader program
+    const location = gl.GetUniformLocation(
+        shader_program,
+        "uTime",
+    );
+
     while (!glfw.windowShouldClose(window)) {
         const frame_start = timer.read();
 
@@ -294,11 +310,22 @@ pub fn main() !void {
         gl.ClearColor(0.0, 0.0, 1.0, 1.0);
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+        gl.UseProgram(shader_program);
+        // uniforms are bound to the shader program,
+        // so we set them after binding the program
+        const time = glfw.getTime();
+        gl.Uniform1d(location, time);
+
         // Bind the vertex array object, which contains the vertex buffer and its attributes
         gl.BindVertexArray(vao);
 
         // Draw
-        gl.DrawElements(gl.TRIANGLES, 3, gl.UNSIGNED_INT, 0);
+        gl.DrawElements(
+            gl.TRIANGLES,
+            3,
+            gl.UNSIGNED_INT,
+            0,
+        );
 
         // Rate limit
         const frame_end = timer.read();
