@@ -24,10 +24,11 @@ pub fn build(b: *std.Build) void {
     const fs = std.fs;
     const allocator = b.allocator;
 
+    const bins_sub_path = "src/bin";
     // Open the `src` directory
-    var src_dir = fs.cwd().openDir("src", .{
+    var src_dir = fs.cwd().openDir(bins_sub_path, .{
         .iterate = true,
-    }) catch @panic("Failed to open src directory");
+    }) catch @panic("Failed to open \"src/bin\" directory");
 
     var iter = src_dir.iterate();
     while (true) {
@@ -39,7 +40,7 @@ pub fn build(b: *std.Build) void {
 
         const project_name = dir_entry.name;
         const project_path = std.fs.path.join(allocator, &[_][]const u8{
-            "src", project_name, "main.zig",
+            bins_sub_path, project_name, "main.zig",
         }) catch @panic("OOM");
 
         const exe = b.addExecutable(.{
