@@ -21,6 +21,11 @@ pub fn build(b: *std.Build) void {
         .extensions = &.{ .ARB_clip_control, .NV_scissor_exclusive },
     });
 
+    const zm = b.dependency("zm", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const fs = std.fs;
     const allocator = b.allocator;
 
@@ -61,6 +66,7 @@ pub fn build(b: *std.Build) void {
 
         // Import the generated module.
         exe.root_module.addImport("gl", gl_bindings);
+        exe.root_module.addImport("zm", zm.module("zm"));
 
         const install_exe = b.addInstallArtifact(exe, .{});
         b.getInstallStep().dependOn(&install_exe.step);
