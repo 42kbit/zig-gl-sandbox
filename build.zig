@@ -68,6 +68,10 @@ pub fn build(b: *std.Build) void {
         exe.root_module.addImport("gl", gl_bindings);
         exe.root_module.addImport("zm", zm.module("zm"));
 
+        exe.root_module.addAnonymousImport("zfx", .{
+            .root_source_file = b.path("src/lib/zfx/lib.zig"),
+        });
+
         const install_exe = b.addInstallArtifact(exe, .{});
         b.getInstallStep().dependOn(&install_exe.step);
 
