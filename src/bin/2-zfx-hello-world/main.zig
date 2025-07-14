@@ -226,32 +226,47 @@ pub fn main() !void {
     );
     defer gl.DeleteBuffers(1, @ptrCast(&vbo));
 
-    // Compile vertex shader
-    const vertex_shader: gl.uint = gl.CreateShader(gl.VERTEX_SHADER);
-    defer gl.DeleteShader(vertex_shader);
+    // TODO:
+    // - Error handling
+    // - Read shaders from file
+    const vshader = try zfx.shader.Shader.initFromSource(
+        .vertex,
+        glsl_vertex_shader,
+    );
+    defer vshader.deinit();
 
-    const success: gl.int = compileShaderSingle(vertex_shader, glsl_vertex_shader);
-    if (success == gl.FALSE) {
-        panicOnShaderCompilationError(std.heap.page_allocator, vertex_shader);
-    }
-
-    // Compile fragment shader
-    const fragment_shader: gl.uint = gl.CreateShader(gl.FRAGMENT_SHADER);
-    defer gl.DeleteShader(fragment_shader);
-
-    const success_fragment: gl.int = compileShaderSingle(
-        fragment_shader,
+    const fshader = try zfx.shader.Shader.initFromSource(
+        .fragment,
         glsl_fragment_shader,
     );
-    if (success_fragment == gl.FALSE) {
-        panicOnShaderCompilationError(std.heap.page_allocator, fragment_shader);
-    }
+    defer fshader.deinit();
+
+    // // Compile vertex shader
+    // const vertex_shader: gl.uint = gl.CreateShader(gl.VERTEX_SHADER);
+    // defer gl.DeleteShader(vertex_shader);
+
+    // const success: gl.int = compileShaderSingle(vertex_shader, glsl_vertex_shader);
+    // if (success == gl.FALSE) {
+    //     panicOnShaderCompilationError(std.heap.page_allocator, vertex_shader);
+    // }
+
+    // // Compile fragment shader
+    // const fragment_shader: gl.uint = gl.CreateShader(gl.FRAGMENT_SHADER);
+    // defer gl.DeleteShader(fragment_shader);
+
+    // const success_fragment: gl.int = compileShaderSingle(
+    //     fragment_shader,
+    //     glsl_fragment_shader,
+    // );
+    // if (success_fragment == gl.FALSE) {
+    //     panicOnShaderCompilationError(std.heap.page_allocator, fragment_shader);
+    // }
 
     // Create shader program
     const shader_program: gl.uint = gl.CreateProgram();
     defer gl.DeleteProgram(shader_program);
-    gl.AttachShader(shader_program, vertex_shader);
-    gl.AttachShader(shader_program, fragment_shader);
+    gl.AttachShader(shader_program, vshader.gl_shader_id);
+    gl.AttachShader(shader_program, fshader.gl_shader_id);
     gl.LinkProgram(shader_program);
 
     // handle shader program linking errors

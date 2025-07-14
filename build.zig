@@ -26,6 +26,16 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    // make a zfx package, link the zm, zglfw and gl bindings to it
+    const zfx = b.addModule("zfx", .{
+        .root_source_file = b.path("src/lib/zfx/lib.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    zfx.addImport("zm", zm.module("zm"));
+    zfx.addImport("zglfw", zglfw.module("glfw"));
+    zfx.addImport("gl", gl_bindings);
+
     const fs = std.fs;
     const allocator = b.allocator;
 
@@ -67,10 +77,7 @@ pub fn build(b: *std.Build) void {
         // Import the generated module.
         exe.root_module.addImport("gl", gl_bindings);
         exe.root_module.addImport("zm", zm.module("zm"));
-
-        exe.root_module.addAnonymousImport("zfx", .{
-            .root_source_file = b.path("src/lib/zfx/lib.zig"),
-        });
+        exe.root_module.addImport("zfx", zfx);
 
         const install_exe = b.addInstallArtifact(exe, .{});
         b.getInstallStep().dependOn(&install_exe.step);
