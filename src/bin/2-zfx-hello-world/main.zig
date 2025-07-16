@@ -5,47 +5,12 @@ const gl = @import("gl");
 
 const zfx = @import("zfx");
 
+const Shader = zfx.gl.shader.Shader;
+const ShaderCreationError = zfx.gl.shader.Shader.ShaderCreationError;
+const ShaderProgram = zfx.gl.shader.ShaderProgram;
+const ShaderType = zfx.gl.shader.ShaderType;
+
 var gl_procs: gl.ProcTable = undefined;
-
-const glsl_vertex_shader =
-    \\#version 430 core
-    \\layout (location = 0) in vec3 aPos;
-    \\layout (location = 1) in vec3 aColor;
-    \\
-    \\out vec3 vertexColor;
-    \\
-    \\uniform double uTime;
-    \\
-    \\void main()
-    \\{
-    \\    vertexColor = aColor;
-    \\    // cast 64 bit float to 32 bit float
-    \\    float y_pos = aPos.y + sin(float(uTime)) * 0.2; // animate y position with time
-    \\    gl_Position = vec4(aPos.x, y_pos, aPos.z, 1.0);
-    \\}
-    \\
-;
-
-const glsl_fragment_shader =
-    \\#version 430 core
-    \\out vec4 FragColor;
-    \\
-    \\uniform double uTime;
-    \\
-    \\// Name should match the output from vertex shader
-    \\in vec3 vertexColor;
-    \\
-    \\void main()
-    \\{
-    \\  // animate color with time
-    \\  float red = abs(vertexColor.x * sin(float(uTime)));
-    \\  float green = abs(vertexColor.y * sin(float(uTime)));
-    \\  float blue = abs(vertexColor.z * sin(float(uTime)));
-    \\  vec3 newColor = vec3(red, green, blue);
-    \\  FragColor = vec4(newColor, 1.0);
-    \\}
-    \\
-;
 
 fn compileShaderSingle(
     shader: gl.uint,
@@ -226,41 +191,38 @@ pub fn main() !void {
     );
     defer gl.DeleteBuffers(1, @ptrCast(&vbo));
 
-    // TODO:
-    // - Error handling
-    // - Read shaders from file
-    const vshader = try zfx.shader.Shader.initFromSource(
+    var vshader_err: []u8 = undefined;
+    const vshader = Shader.initFromFile(
+        std.heap.smp_allocator,
         .vertex,
-        glsl_vertex_shader,
-    );
+        "src/bin/2-zfx-hello-world/vertex.glsl",
+        &vshader_err,
+    ) catch |err| switch (err) {
+        ShaderCreationError.ShaderCompilationFailed => {
+            std.debug.print("Vertex Shader creation failed:\n\t{s}\n", .{vshader_err});
+            std.heap.smp_allocator.free(vshader_err); // free error log
+            return err;
+        },
+        else => return err,
+    };
     defer vshader.deinit();
 
-    const fshader = try zfx.shader.Shader.initFromSource(
+    var fshader_err: []u8 = undefined;
+    const fshader = Shader.initFromFile(
+        std.heap.smp_allocator,
         .fragment,
-        glsl_fragment_shader,
-    );
+        "src/bin/2-zfx-hello-world/fragment.glsl",
+        &fshader_err,
+    ) catch |err| switch (err) {
+        ShaderCreationError.ShaderCompilationFailed => {
+            std.debug.print("Vertex Shader creation failed:\n\t{s}\n", .{fshader_err});
+            std.heap.smp_allocator.free(fshader_err);
+            return err;
+        },
+        else => return err,
+    };
+    // process error if any
     defer fshader.deinit();
-
-    // // Compile vertex shader
-    // const vertex_shader: gl.uint = gl.CreateShader(gl.VERTEX_SHADER);
-    // defer gl.DeleteShader(vertex_shader);
-
-    // const success: gl.int = compileShaderSingle(vertex_shader, glsl_vertex_shader);
-    // if (success == gl.FALSE) {
-    //     panicOnShaderCompilationError(std.heap.page_allocator, vertex_shader);
-    // }
-
-    // // Compile fragment shader
-    // const fragment_shader: gl.uint = gl.CreateShader(gl.FRAGMENT_SHADER);
-    // defer gl.DeleteShader(fragment_shader);
-
-    // const success_fragment: gl.int = compileShaderSingle(
-    //     fragment_shader,
-    //     glsl_fragment_shader,
-    // );
-    // if (success_fragment == gl.FALSE) {
-    //     panicOnShaderCompilationError(std.heap.page_allocator, fragment_shader);
-    // }
 
     // Create shader program
     const shader_program: gl.uint = gl.CreateProgram();

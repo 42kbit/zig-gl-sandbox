@@ -19,28 +19,41 @@ pub fn deinit(self: Shader) void {
     gl.DeleteShader(self.gl_shader_id);
 }
 
+// init function loads and compiles shader from file
+
+// possible enhancements:
+// - instead of ?*[]u8, use struct with error
+// - instead of ?*[]u8 use anytype, if *[]u8 is provided, write the log into it, if struct is provided, write the error into it
 pub fn initFromFile(
     alloc: std.mem.Allocator,
     shader_type: ShaderType,
     file_path: []const u8,
+    error_log: ?*[]u8,
 ) !Shader {
     const file = try std.fs.cwd().openFile(file_path, .{});
     defer file.close();
 
-    const file_size = try file.stat().size;
+    const file_size = (try file.stat()).size;
 
     const source = try alloc.alloc(u8, file_size);
     defer alloc.free(source);
 
     _ = try file.readAll(source);
 
-    return initFromSource(shader_type, source);
+    return initFromSource(
+        alloc,
+        shader_type,
+        source,
+        error_log,
+    );
 }
 
 pub fn initFromSource(
+    alloc: std.mem.Allocator,
     shader_type: ShaderType,
     source: []const u8,
-) ShaderCreationError!Shader {
+    error_log: ?*[]u8,
+) !Shader {
     const shader = gl.CreateShader(
         switch (shader_type) {
             .vertex => gl.VERTEX_SHADER,
@@ -48,7 +61,7 @@ pub fn initFromSource(
         },
     );
     if (shader == gl.FALSE) {
-        return error.ShaderCreationFailed;
+        return ShaderCreationError.ShaderCreationFailed;
     }
 
     // Compile shader
@@ -62,19 +75,22 @@ pub fn initFromSource(
     gl.GetShaderiv(shader, gl.COMPILE_STATUS, &success);
 
     if (success == gl.FALSE) {
-        return error.ShaderCompilationFailed;
+        // if error_log is provided, write the log into it
+        // freeing the code is the caller's responsibility
+        if (error_log) |log| {
+            const log_content = try getGLShaderCompilationLog(
+                alloc,
+                shader,
+            );
+            log.* = log_content;
+        }
+
+        return ShaderCreationError.ShaderCompilationFailed;
     }
     return Shader{
         .gl_shader_id = shader,
         .type = shader_type,
     };
-}
-
-pub fn getShaderCompilationLog(
-    shader: Shader,
-    alloc: std.mem.Allocator,
-) ![]u8 {
-    return try getGLShaderCompilationLog(alloc, shader.gl_shader_id);
 }
 
 fn getGLShaderCompilationLog(
