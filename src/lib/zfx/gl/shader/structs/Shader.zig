@@ -1,22 +1,21 @@
 const std = @import("std");
 const gl = @import("gl");
 
-// TODO: more verbose error handling
 pub const ShaderCreationError = error{
     // generic error
-    ShaderCreationFailed,
-    ShaderCompilationFailed,
+    CreationFailed,
+    CompilationFailed,
 };
 
 const ShaderType = @import("../shader.zig").ShaderType;
 
 const Shader = @This();
 
-gl_shader_id: gl.uint,
+gl_id: gl.uint,
 type: ShaderType,
 
 pub fn deinit(self: Shader) void {
-    gl.DeleteShader(self.gl_shader_id);
+    gl.DeleteShader(self.gl_id);
 }
 
 // init function loads and compiles shader from file
@@ -61,7 +60,7 @@ pub fn initFromSource(
         },
     );
     if (shader == gl.FALSE) {
-        return ShaderCreationError.ShaderCreationFailed;
+        return ShaderCreationError.CreationFailed;
     }
 
     // Compile shader
@@ -85,10 +84,10 @@ pub fn initFromSource(
             log.* = log_content;
         }
 
-        return ShaderCreationError.ShaderCompilationFailed;
+        return ShaderCreationError.CompilationFailed;
     }
     return Shader{
-        .gl_shader_id = shader,
+        .gl_id = shader,
         .type = shader_type,
     };
 }

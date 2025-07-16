@@ -7,98 +7,14 @@ const zfx = @import("zfx");
 
 const Shader = zfx.gl.shader.Shader;
 const ShaderCreationError = zfx.gl.shader.Shader.ShaderCreationError;
-const ShaderProgram = zfx.gl.shader.ShaderProgram;
 const ShaderType = zfx.gl.shader.ShaderType;
 
+const ShaderProgram = zfx.gl.shader.ShaderProgram;
+const ShaderProgramCreationError = zfx.gl.shader.ShaderProgram.ShaderProgramCreationError;
+
+const alloc = std.heap.page_allocator;
+
 var gl_procs: gl.ProcTable = undefined;
-
-fn compileShaderSingle(
-    shader: gl.uint,
-    source: []const u8,
-) gl.int {
-    // ShaderSource can concatinate different strings, this is why it
-    // expects that you'll pass multiple strings, see https://stackoverflow.com/a/22100409
-    gl.ShaderSource(shader, 1, @ptrCast(&source), null);
-    gl.CompileShader(shader);
-
-    var success: gl.int = undefined;
-    gl.GetShaderiv(shader, gl.COMPILE_STATUS, &success);
-    return success;
-}
-
-fn getShaderCompilationLog(
-    alloc: std.mem.Allocator,
-    shader: gl.uint,
-) ![]u8 {
-    // get error log length
-    var log_length: gl.int = 0;
-    gl.GetShaderiv(
-        shader,
-        gl.INFO_LOG_LENGTH,
-        &log_length,
-    );
-
-    // allocate log_length
-    const log: []u8 = try alloc.alloc(
-        u8,
-        @intCast(log_length),
-    );
-
-    // write log length into a buffer
-    gl.GetShaderInfoLog(
-        shader,
-        log_length,
-        null,
-        log.ptr,
-    );
-
-    return log;
-}
-
-fn panicOnShaderCompilationError(
-    alloc: std.mem.Allocator,
-    shader: gl.uint,
-) noreturn {
-    const log = getShaderCompilationLog(
-        alloc,
-        shader,
-    ) catch @panic("OOM");
-    defer alloc.free(log);
-
-    // print the error log with \n\t
-    std.debug.print(
-        "Fragment Shader compilation failed\n\t{s}\n",
-        .{log},
-    );
-    @panic("Fragment shader compilation failed");
-}
-
-fn getProgramLinkLog(
-    alloc: std.mem.Allocator,
-    program: gl.uint,
-) ![]u8 {
-    var log_length: gl.int = 0;
-    gl.GetProgramiv(program, gl.INFO_LOG_LENGTH, &log_length);
-
-    const log: []u8 = try alloc.alloc(u8, @intCast(log_length));
-    gl.GetProgramInfoLog(program, log_length, null, log.ptr);
-
-    return log;
-}
-
-fn panicOnProgramLinkError(
-    alloc: std.mem.Allocator,
-    program: gl.uint,
-) noreturn {
-    const log = getProgramLinkLog(alloc, program) catch @panic("OOM");
-    defer alloc.free(log);
-
-    std.debug.print(
-        "Shader program linking failed\n\t{s}\n",
-        .{log},
-    );
-    @panic("Shader program linking failed");
-}
 
 pub fn main() !void {
     var major: i32 = 0;
@@ -193,14 +109,14 @@ pub fn main() !void {
 
     var vshader_err: []u8 = undefined;
     const vshader = Shader.initFromFile(
-        std.heap.smp_allocator,
+        alloc,
         .vertex,
         "src/bin/2-zfx-hello-world/vertex.glsl",
         &vshader_err,
     ) catch |err| switch (err) {
-        ShaderCreationError.ShaderCompilationFailed => {
+        ShaderCreationError.CompilationFailed => {
             std.debug.print("Vertex Shader creation failed:\n\t{s}\n", .{vshader_err});
-            std.heap.smp_allocator.free(vshader_err); // free error log
+            alloc.free(vshader_err); // free error log
             return err;
         },
         else => return err,
@@ -209,14 +125,14 @@ pub fn main() !void {
 
     var fshader_err: []u8 = undefined;
     const fshader = Shader.initFromFile(
-        std.heap.smp_allocator,
+        alloc,
         .fragment,
         "src/bin/2-zfx-hello-world/fragment.glsl",
         &fshader_err,
     ) catch |err| switch (err) {
-        ShaderCreationError.ShaderCompilationFailed => {
+        ShaderCreationError.CompilationFailed => {
             std.debug.print("Vertex Shader creation failed:\n\t{s}\n", .{fshader_err});
-            std.heap.smp_allocator.free(fshader_err);
+            alloc.free(fshader_err);
             return err;
         },
         else => return err,
@@ -224,19 +140,19 @@ pub fn main() !void {
     // process error if any
     defer fshader.deinit();
 
-    // Create shader program
-    const shader_program: gl.uint = gl.CreateProgram();
-    defer gl.DeleteProgram(shader_program);
-    gl.AttachShader(shader_program, vshader.gl_shader_id);
-    gl.AttachShader(shader_program, fshader.gl_shader_id);
-    gl.LinkProgram(shader_program);
-
-    // handle shader program linking errors
-    var success_link: gl.int = undefined;
-    gl.GetProgramiv(shader_program, gl.LINK_STATUS, &success_link);
-    if (success_link == gl.FALSE) {
-        panicOnProgramLinkError(std.heap.page_allocator, shader_program);
-    }
+    var shader_program_err: []u8 = undefined;
+    const shader_program = ShaderProgram.init(
+        alloc,
+        &[_]Shader{ vshader, fshader },
+        &shader_program_err,
+    ) catch |err| switch (err) {
+        ShaderProgramCreationError.LinkageFailed => {
+            std.debug.print("Shader Program linking failed:\n\t{s}\n", .{shader_program_err});
+            alloc.free(shader_program_err);
+            return err;
+        },
+        else => return err,
+    };
 
     var vao: gl.uint = undefined;
     gl.GenVertexArrays(1, @ptrCast(&vao));
@@ -274,7 +190,7 @@ pub fn main() !void {
     // Get the location of the uniform variable in the shader program
     // does not requrie binding the shader program
     const location = gl.GetUniformLocation(
-        shader_program,
+        shader_program.gl_id,
         "uTime",
     );
     if (location == -1) {
@@ -292,7 +208,7 @@ pub fn main() !void {
         gl.ClearColor(0.0, 0.0, 1.0, 1.0);
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        gl.UseProgram(shader_program);
+        gl.UseProgram(shader_program.gl_id);
         // uniforms are bound to the shader program,
         // so we set them after binding the program
         const time = glfw.getTime();
