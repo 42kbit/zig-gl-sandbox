@@ -12,6 +12,8 @@ const ShaderType = zfx.gl.shader.ShaderType;
 const ShaderProgram = zfx.gl.shader.ShaderProgram;
 const ShaderProgramCreationError = zfx.gl.shader.ShaderProgram.ShaderProgramCreationError;
 
+const Buffer = zfx.gl.buffer.Buffer;
+
 const alloc = std.heap.page_allocator;
 
 var gl_procs: gl.ProcTable = undefined;
@@ -79,33 +81,22 @@ pub fn main() !void {
 
     const indices = [_]u32{ 0, 1, 2 };
     const indices_len: comptime_int = indices.len;
-    // Cast "indices" to a 1D array
-    const i_ptr: *const [indices_len]u32 = @ptrCast(&indices);
 
-    // create EBO (Element Buffer Object)
-    var ebo: gl.uint = undefined;
-    gl.GenBuffers(1, @ptrCast(&ebo));
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
-    gl.BufferData(
-        gl.ELEMENT_ARRAY_BUFFER,
-        indices_len * @sizeOf(u32),
-        i_ptr,
-        gl.STATIC_DRAW,
+    var ebo = try Buffer.init(.Index);
+    ebo.bind();
+    ebo.setBufferData(
+        indices[0..indices_len],
+        .StaticDraw,
     );
-    defer gl.DeleteBuffers(1, @ptrCast(&ebo));
+    defer ebo.deinit();
 
-    var vbo: gl.uint = undefined;
-    // ptrCast is used to cast *gl.uint to [*]gl.uint
-    gl.GenBuffers(1, @ptrCast(&vbo));
-
-    gl.BindBuffer(gl.ARRAY_BUFFER, vbo);
-    gl.BufferData(
-        gl.ARRAY_BUFFER,
-        verts_len * @sizeOf(f32),
-        v_ptr,
-        gl.STATIC_DRAW,
+    var vbo = try Buffer.init(.Vertex);
+    vbo.bind();
+    vbo.setBufferData(
+        v_ptr[0..verts_len],
+        .StaticDraw,
     );
-    defer gl.DeleteBuffers(1, @ptrCast(&vbo));
+    defer vbo.deinit();
 
     var vshader_err: []u8 = undefined;
     const vshader = Shader.initFromFile(
@@ -161,10 +152,10 @@ pub fn main() !void {
     gl.BindVertexArray(vao);
 
     // VAO also stores the EBO, so we can bind it here
-    gl.BindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo);
+    ebo.bind();
 
     // Bind the VBO to which vertex attributes would apply
-    gl.BindBuffer(gl.ARRAY_BUFFER, vbo);
+    vbo.bind();
     // Enable vertex attribute array "layout (location 0)" in the vertex shader
 
     gl.EnableVertexAttribArray(0);
