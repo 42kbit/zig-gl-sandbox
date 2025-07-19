@@ -3,7 +3,7 @@ const glfw = @import("zglfw");
 
 const gl = @import("gl");
 
-const zfx = @import("zfx");
+const zfx = @import("zfx/lib.zig");
 
 const Shader = zfx.gl.shader.Shader;
 const ShaderCreationError = zfx.gl.shader.Shader.ShaderCreationError;
@@ -19,6 +19,51 @@ const VAO = zfx.gl.vao.VAO;
 const alloc = std.heap.page_allocator;
 
 var gl_procs: gl.ProcTable = undefined;
+
+const Texture2D = struct {
+    data: []const u8,
+    width: gl.sizei,
+    height: gl.sizei,
+
+    // alloc: std.mem.Allocator,
+
+    // when not []const u8 but []u8
+    // pub fn initRaw(
+    //     tex_alloc: std.mem.Allocator,
+    //     width: gl.sizei,
+    //     height: gl.sizei,
+    //     data_source: []const u8,
+    // ) !Texture2D {
+    //     var tex = Texture2D{
+    //         .data = undefined,
+    //         .width = width,
+    //         .height = height,
+    //         .alloc = alloc,
+    //     };
+
+    //     tex.data = try tex_alloc.alloc(
+    //         u8,
+    //         @intCast(width * height),
+    //     );
+
+    //     std.mem.copyForwards(u8, tex.data, data_source);
+
+    //     return tex;
+    // }
+
+    // pub fn deinit(self: *Texture2D) void {
+    //     self.alloc.free(self.data);
+    // }
+};
+
+const triangle = Texture2D{
+    .height = 2,
+    .width = 2,
+    // rgba from bottom-left
+    .data = &texture_data,
+};
+
+const texture_data = [_]u8{ 255, 0, 0, 0, 255, 255, 0, 0, 0, 255, 0, 0, 0, 0, 255, 0 };
 
 pub fn main() !void {
     var major: i32 = 0;
@@ -69,10 +114,11 @@ pub fn main() !void {
 
     var timer = try std.time.Timer.start();
 
-    const verticies = [_][6]f32{
-        [_]f32{ -0.5, -0.5, 0.0, 1.0, 0.0, 0.0 },
-        [_]f32{ 0.5, -0.5, 0.0, 0.0, 1.0, 0.0 },
-        [_]f32{ 0.0, 0.5, 0.0, 1.0, 1.0, 0.0 },
+    const verticies = [_][8]f32{
+        // x, y, z, r, g, b, s, t
+        [_]f32{ -0.5, -0.5, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0 },
+        [_]f32{ 0.5, -0.5, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0 },
+        [_]f32{ 0.0, 0.5, 0.0, 1.0, 1.0, 0.0, 0.5, 1.0 },
     };
     // Byte size of each vertex attribute
     const stride: comptime_int = verticies[0].len * @sizeOf(f32);
@@ -147,6 +193,33 @@ pub fn main() !void {
         else => return err,
     };
 
+    var tex_id: gl.uint = undefined;
+    gl.GenTextures(1, @ptrCast(&tex_id));
+    defer gl.DeleteTextures(1, @ptrCast(&tex_id));
+
+    // activate zeroth texture
+    gl.ActiveTexture(gl.TEXTURE0);
+    // bind this texture to global context and slot 0
+    gl.BindTexture(gl.TEXTURE_2D, tex_id);
+
+    // populate currently bound texture with data
+    gl.TexImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        triangle.width,
+        triangle.height,
+        0,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        &texture_data,
+    );
+
+    // Generate Mipmaps for the texture
+    gl.GenerateMipmap(gl.TEXTURE_2D);
+
+    // since texture is currently bound, it can be used in a graphics pipeline
+
     var vao = try VAO.init();
     defer vao.deinit();
 
@@ -179,6 +252,17 @@ pub fn main() !void {
         3 * @sizeOf(f32),
     );
 
+    // texture coords
+    gl.EnableVertexAttribArray(2);
+    gl.VertexAttribPointer(
+        2,
+        2,
+        gl.FLOAT,
+        gl.FALSE,
+        stride,
+        6 * @sizeOf(f32),
+    );
+
     // Get the location of the uniform variable in the shader program
     // does not requrie binding the shader program
     const location = gl.GetUniformLocation(
@@ -188,6 +272,16 @@ pub fn main() !void {
     if (location == -1) {
         @panic("Uniform variable 'uTime' not found in shader program");
     }
+
+    const tex_location = gl.GetUniformLocation(
+        shader_program.gl_id,
+        "texture0",
+    );
+    if (tex_location == -1) {
+        @panic("Texture position not found");
+    }
+    // pass the currently bound texture 0
+    gl.Uniform1i(tex_location, 0);
 
     while (!glfw.windowShouldClose(window)) {
         const frame_start = timer.read();
