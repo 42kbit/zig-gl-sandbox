@@ -44,7 +44,7 @@ pub fn init(
     };
 }
 
-pub fn deinit(self: ShaderProgram) !void {
+pub fn deinit(self: ShaderProgram) void {
     gl.DeleteProgram(self.gl_id);
 }
 

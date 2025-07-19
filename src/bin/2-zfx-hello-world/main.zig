@@ -14,6 +14,8 @@ const ShaderProgramCreationError = zfx.gl.shader.ShaderProgram.ShaderProgramCrea
 
 const Buffer = zfx.gl.buffer.Buffer;
 
+const VAO = zfx.gl.vao.VAO;
+
 const alloc = std.heap.page_allocator;
 
 var gl_procs: gl.ProcTable = undefined;
@@ -145,11 +147,10 @@ pub fn main() !void {
         else => return err,
     };
 
-    var vao: gl.uint = undefined;
-    gl.GenVertexArrays(1, @ptrCast(&vao));
-    defer gl.DeleteVertexArrays(1, @ptrCast(&vao));
+    var vao = try VAO.init();
+    defer vao.deinit();
 
-    gl.BindVertexArray(vao);
+    vao.bind();
 
     // VAO also stores the EBO, so we can bind it here
     ebo.bind();
@@ -206,7 +207,7 @@ pub fn main() !void {
         gl.Uniform1d(location, time);
 
         // Bind the vertex array object, which contains the vertex buffer and its attributes
-        gl.BindVertexArray(vao);
+        gl.BindVertexArray(vao.gl_id);
 
         // Draw
         gl.DrawElements(
