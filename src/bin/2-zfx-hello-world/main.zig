@@ -202,6 +202,13 @@ pub fn main() !void {
     // bind this texture to global context and slot 0
     gl.BindTexture(gl.TEXTURE_2D, tex_id);
 
+    // How the texture() function in GLSL should handle the texture interpolation (texture filtering)
+    // In this case since the texture is only 2 by 2 pixels and a triangle is much more than that
+    // We really only need the MAG_FILTER (magnifiying image), but we still set
+    // MIN (minifying image) just for my sanity
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
     // populate currently bound texture with data
     gl.TexImage2D(
         gl.TEXTURE_2D,
