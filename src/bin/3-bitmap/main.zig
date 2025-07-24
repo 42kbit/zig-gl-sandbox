@@ -3,6 +3,8 @@ const glfw = @import("zglfw");
 
 const gl = @import("gl");
 
+const zm = @import("zm");
+
 const zfx = @import("zfx/lib.zig");
 
 const Shader = zfx.gl.shader.Shader;
@@ -261,6 +263,8 @@ pub fn main() !void {
         3 * @sizeOf(f32),
     );
 
+    gl.UseProgram(shader_program.gl_id);
+
     const tex_location = gl.GetUniformLocation(
         shader_program.gl_id,
         "texture0",
@@ -270,6 +274,34 @@ pub fn main() !void {
     }
     // pass the currently bound texture 0
     gl.Uniform1i(tex_location, 0);
+
+    // const projection = zm.Mat4.orthographic(
+    //     0,
+    //     800,
+    //     0,
+    //     600,
+    //     0,
+    //     100,
+    // ).transpose();
+
+    // transpose for opengl
+    var projection = zm.Mat4f.identity();
+    const view = zm.Mat4f.translation(0.0, 0.1, 0.0);
+    projection = projection.multiply(view);
+
+    const u_proj_location = gl.GetUniformLocation(
+        shader_program.gl_id,
+        "uProjection",
+    );
+    if (u_proj_location == -1) {
+        @panic("uProjection not found in shader");
+    }
+    gl.UniformMatrix4fv(
+        u_proj_location,
+        1,
+        gl.TRUE, // alternatively you can transpose matrix by calling .transpose() on Mat4 (CPU side)
+        @ptrCast(&projection),
+    );
 
     while (!glfw.windowShouldClose(window)) {
         const frame_start = timer.read();

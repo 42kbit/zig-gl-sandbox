@@ -4,8 +4,10 @@ layout (location = 1) in vec2 aTex;
 
 out vec2 texCoords;
 
+uniform mat4 uProjection;
+
 void main()
 {
     texCoords = aTex;
-    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    gl_Position = uProjection * vec4(aPos.x, aPos.y, aPos.z, 1.0);
 }
