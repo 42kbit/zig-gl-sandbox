@@ -67,6 +67,11 @@ const triangle = Texture2D{
 
 const texture_data = [_]u8{ 255, 0, 0, 0, 255, 255, 0, 0, 0, 255, 0, 0, 0, 0, 255, 0 };
 
+fn resize_callback(window: *glfw.Window, width: c_int, height: c_int) callconv(.C) void {
+    _ = window;
+    gl.Viewport(0, 0, width, height);
+}
+
 pub fn main() !void {
     var major: i32 = 0;
     var minor: i32 = 0;
@@ -110,6 +115,8 @@ pub fn main() !void {
 
     const version = gl.GetString(gl.VERSION) orelse "unknown";
     std.debug.print("OpenGL version: {s}\n", .{version});
+
+    _ = glfw.setWindowSizeCallback(window, resize_callback);
 
     const target_fps = 60;
     const target_frame_time_ns = @divFloor(1_000_000_000, target_fps);
@@ -275,20 +282,6 @@ pub fn main() !void {
     // pass the currently bound texture 0
     gl.Uniform1i(tex_location, 0);
 
-    // const projection = zm.Mat4.orthographic(
-    //     0,
-    //     800,
-    //     0,
-    //     600,
-    //     0,
-    //     100,
-    // ).transpose();
-
-    // transpose for opengl
-    var projection = zm.Mat4f.identity();
-    const view = zm.Mat4f.translation(0.0, 0.1, 0.0);
-    projection = projection.multiply(view);
-
     const u_proj_location = gl.GetUniformLocation(
         shader_program.gl_id,
         "uProjection",
@@ -296,12 +289,6 @@ pub fn main() !void {
     if (u_proj_location == -1) {
         @panic("uProjection not found in shader");
     }
-    gl.UniformMatrix4fv(
-        u_proj_location,
-        1,
-        gl.TRUE, // alternatively you can transpose matrix by calling .transpose() on Mat4 (CPU side)
-        @ptrCast(&projection),
-    );
 
     while (!glfw.windowShouldClose(window)) {
         const frame_start = timer.read();
@@ -315,6 +302,40 @@ pub fn main() !void {
         gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         gl.UseProgram(shader_program.gl_id);
+
+        var window_width: c_int = undefined;
+        var window_height: c_int = undefined;
+        glfw.getWindowSize(window, &window_width, &window_height);
+
+        const projection = zm.Mat4f.perspective(
+            std.math.degreesToRadians(45.0),
+            @divFloor(
+                @as(f32, @floatFromInt(window_width)),
+                @as(f32, @floatFromInt(window_height)),
+            ),
+            0.1,
+            100,
+        );
+
+        // move scene a bit backwards
+        // by default camera looks in -z direction
+        const view = zm.Mat4f.identity()
+            .multiply(zm.Mat4f.translation(0, 0, -4));
+
+        const model = zm.Mat4f.identity()
+            .multiply(zm.Mat4f.rotation(
+            zm.Vec3f{ 1, 0, 0 },
+            std.math.degreesToRadians(-45),
+        ));
+
+        const mvp = projection.multiply(view).multiply(model);
+
+        gl.UniformMatrix4fv(
+            u_proj_location,
+            1,
+            gl.TRUE, // alternatively you can transpose matrix by calling .transpose() on Mat4 (CPU side)
+            @ptrCast(&mvp),
+        );
 
         // Bind the vertex array object, which contains the vertex buffer and its attributes
         gl.BindVertexArray(vao.gl_id);
