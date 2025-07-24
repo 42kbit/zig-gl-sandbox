@@ -270,6 +270,8 @@ pub fn main() !void {
         6 * @sizeOf(f32),
     );
 
+    gl.UseProgram(shader_program.gl_id);
+
     // Get the location of the uniform variable in the shader program
     // does not requrie binding the shader program
     const location = gl.GetUniformLocation(
