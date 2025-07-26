@@ -303,10 +303,6 @@ pub fn main() !void {
 
         gl.UseProgram(shader_program.gl_id);
 
-        var window_width: c_int = undefined;
-        var window_height: c_int = undefined;
-        glfw.getWindowSize(window, &window_width, &window_height);
-
         const projection = zm.Mat4f.orthographic(
             -2,
             2,
