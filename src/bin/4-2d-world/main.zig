@@ -307,26 +307,19 @@ pub fn main() !void {
         var window_height: c_int = undefined;
         glfw.getWindowSize(window, &window_width, &window_height);
 
-        const projection = zm.Mat4f.perspective(
-            std.math.degreesToRadians(45.0),
-            @divFloor(
-                @as(f32, @floatFromInt(window_width)),
-                @as(f32, @floatFromInt(window_height)),
-            ),
-            0.1,
-            100,
+        const projection = zm.Mat4f.orthographic(
+            -2,
+            2,
+            -2,
+            2,
+            0,
+            1000,
         );
 
         // move scene a bit backwards
         // by default camera looks in -z direction
-        const view = zm.Mat4f.identity()
-            .multiply(zm.Mat4f.translation(0, 0, -4));
-
-        const model = zm.Mat4f.identity()
-            .multiply(zm.Mat4f.rotation(
-            zm.Vec3f{ 1, 0, 0 },
-            std.math.degreesToRadians(-45),
-        ));
+        const view = zm.Mat4f.identity();
+        const model = zm.Mat4f.identity();
 
         const mvp = projection.multiply(view).multiply(model);
 
