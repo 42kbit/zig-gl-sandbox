@@ -160,7 +160,7 @@ pub fn main() !void {
     const vshader = Shader.initFromFile(
         alloc,
         .vertex,
-        "src/bin/3-bitmap/vertex.glsl",
+        "src/bin/3-projection-matrix/vertex.glsl",
         &vshader_err,
     ) catch |err| switch (err) {
         ShaderCreationError.CompilationFailed => {
@@ -176,7 +176,7 @@ pub fn main() !void {
     const fshader = Shader.initFromFile(
         alloc,
         .fragment,
-        "src/bin/3-bitmap/fragment.glsl",
+        "src/bin/3-projection-matrix/fragment.glsl",
         &fshader_err,
     ) catch |err| switch (err) {
         ShaderCreationError.CompilationFailed => {
