@@ -313,7 +313,7 @@ pub fn main() !void {
                 @as(f32, @floatFromInt(window_width)),
                 @as(f32, @floatFromInt(window_height)),
             ),
-            0.1,
+            0,
             100,
         );
 
