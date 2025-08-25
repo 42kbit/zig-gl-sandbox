@@ -317,16 +317,15 @@ pub fn main() !void {
             100,
         );
 
-        // move scene a bit backwards
-        // by default camera looks in -z direction
-        const view = zm.Mat4f.identity()
-            .multiply(zm.Mat4f.translation(0, 0, -4));
+        const view = zm.Mat4f.identity();
 
+        // move the rotate the cube and move it a bit forward
         const model = zm.Mat4f.identity()
+            .multiply(zm.Mat4f.translation(0, 0, -4))
             .multiply(zm.Mat4f.rotation(
-            zm.Vec3f{ 1, 0, 0 },
-            std.math.degreesToRadians(-45),
-        ));
+                zm.Vec3f{ 1, 0, 0 },
+                std.math.degreesToRadians(-45),
+            )).multiply(zm.Mat4f.scaling(0.75, 0.75, 1));
 
         const mvp = projection.multiply(view).multiply(model);
 
