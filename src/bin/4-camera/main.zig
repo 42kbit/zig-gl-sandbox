@@ -305,6 +305,11 @@ pub fn main() !void {
     if (u_model_location == -1) {
         @panic("uModel not found in shader");
     }
+    var camera_position = zm.Vec3f{
+        0,
+        0,
+        3,
+    };
 
     while (!glfw.windowShouldClose(window)) {
         const frame_start = timer.read();
@@ -333,18 +338,31 @@ pub fn main() !void {
             100,
         );
 
-        // by default our camera points into -z direction
-        // since opengl uses a right-handed coordinate system
-        // therefore we move it a bit backwards
-        const camera_pos = zm.Vec3f{
-            @as(f32, @floatCast(@sin(glfw.getTime()))) * 2.0,
-            0,
-            @as(f32, @floatCast(@cos(glfw.getTime()))) * 2.0,
-        };
+        // since opengl is right handed, and Z coordinate is flipped after projection matrix multiplication
+        // The "forward" vector is flipped, e.g to transform
+        const camera_target = zm.Vec3f{ 0, 0, 0 };
+        const camera_forward = zm.vec.normalize(camera_target - camera_position);
+        const camera_right = zm.vec.normalize(
+            zm.vec.cross(camera_forward, zm.Vec3f{ 0, 1, 0 }),
+        );
+        const camera_up = zm.vec.cross(camera_right, camera_forward);
+
+        if (glfw.getKey(window, glfw.KeyD) == glfw.Press) {
+            camera_position += zm.vec.scale(camera_right, 0.01);
+        }
+        if (glfw.getKey(window, glfw.KeyA) == glfw.Press) {
+            camera_position -= zm.vec.scale(camera_right, 0.01);
+        }
+        if (glfw.getKey(window, glfw.KeyW) == glfw.Press) {
+            camera_position += zm.vec.scale(camera_forward, 0.01);
+        }
+        if (glfw.getKey(window, glfw.KeyS) == glfw.Press) {
+            camera_position -= zm.vec.scale(camera_forward, 0.01);
+        }
 
         const view = zm.Mat4f.lookAt(
-            camera_pos,
-            zm.Vec3f{ 0, 0, 0 },
+            camera_position,
+            camera_position + camera_forward,
             zm.Vec3f{ 0, 1, 0 },
         );
 
