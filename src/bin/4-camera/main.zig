@@ -340,8 +340,8 @@ pub fn main() !void {
             100,
         );
 
-        // by convention in view space we use right handed coordinate system
-        // where you look towards -z
+        // in this case we use left-handed coordinate system,
+        // where camera looks towards +z
         const camera_target = camera_position + zm.Vec3f{ 0, 0, 1 };
         const camera_forward = zm.vec.normalize(camera_target - camera_position);
         const camera_right = zm.vec.normalize(
