@@ -340,7 +340,7 @@ pub fn main() !void {
 
         // since opengl is right handed, and Z coordinate is flipped after projection matrix multiplication
         // The "forward" vector is flipped, e.g to transform
-        const camera_target = zm.Vec3f{ 0, 0, 0 };
+        const camera_target = camera_position + zm.Vec3f{ 0, 0, -1 };
         const camera_forward = zm.vec.normalize(camera_target - camera_position);
         const camera_right = zm.vec.normalize(
             zm.vec.cross(camera_forward, zm.Vec3f{ 0, 1, 0 }),
@@ -359,7 +359,12 @@ pub fn main() !void {
         if (glfw.getKey(window, glfw.KeyS) == glfw.Press) {
             camera_position -= zm.vec.scale(camera_forward, 0.01);
         }
-
+        if (glfw.getKey(window, glfw.KeySpace) == glfw.Press) {
+            camera_position += zm.vec.scale(camera_up, 0.01);
+        }
+        if (glfw.getKey(window, glfw.KeyLeftShift) == glfw.Press) {
+            camera_position -= zm.vec.scale(camera_up, 0.01);
+        }
         const view = zm.Mat4f.lookAt(
             camera_position,
             camera_position + camera_forward,
