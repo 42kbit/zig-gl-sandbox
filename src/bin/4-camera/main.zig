@@ -160,7 +160,7 @@ pub fn main() !void {
     const vshader = Shader.initFromFile(
         alloc,
         .vertex,
-        "src/bin/3-projection-matrix/vertex.glsl",
+        "src/bin/4-camera/vertex.glsl",
         &vshader_err,
     ) catch |err| switch (err) {
         ShaderCreationError.CompilationFailed => {
@@ -176,7 +176,7 @@ pub fn main() !void {
     const fshader = Shader.initFromFile(
         alloc,
         .fragment,
-        "src/bin/3-projection-matrix/fragment.glsl",
+        "src/bin/4-camera/fragment.glsl",
         &fshader_err,
     ) catch |err| switch (err) {
         ShaderCreationError.CompilationFailed => {
@@ -290,6 +290,22 @@ pub fn main() !void {
         @panic("uProjection not found in shader");
     }
 
+    const u_view_location = gl.GetUniformLocation(
+        shader_program.gl_id,
+        "uView",
+    );
+    if (u_view_location == -1) {
+        @panic("uView not found in shader");
+    }
+
+    const u_model_location = gl.GetUniformLocation(
+        shader_program.gl_id,
+        "uModel",
+    );
+    if (u_model_location == -1) {
+        @panic("uModel not found in shader");
+    }
+
     while (!glfw.windowShouldClose(window)) {
         const frame_start = timer.read();
 
@@ -317,23 +333,48 @@ pub fn main() !void {
             100,
         );
 
-        const view = zm.Mat4f.identity();
+        // by default our camera points into -z direction
+        // since opengl uses a right-handed coordinate system
+        // therefore we move it a bit backwards
+        const camera_pos = zm.Vec3f{
+            @as(f32, @floatCast(@sin(glfw.getTime()))) * 2.0,
+            0,
+            @as(f32, @floatCast(@cos(glfw.getTime()))) * 2.0,
+        };
+
+        const view = zm.Mat4f.lookAt(
+            camera_pos,
+            zm.Vec3f{ 0, 0, 0 },
+            zm.Vec3f{ 0, 1, 0 },
+        );
 
         // move the rotate the cube and move it a bit forward
         const model = zm.Mat4f.identity()
-            .multiply(zm.Mat4f.translation(0, 0, -4))
+            .multiply(zm.Mat4f.translation(0, 0, 0))
             .multiply(zm.Mat4f.rotation(
                 zm.Vec3f{ 1, 0, 0 },
                 std.math.degreesToRadians(-45),
             )).multiply(zm.Mat4f.scaling(0.75, 0.75, 1));
 
-        const mvp = projection.multiply(view).multiply(model);
-
         gl.UniformMatrix4fv(
             u_proj_location,
             1,
             gl.TRUE, // alternatively you can transpose matrix by calling .transpose() on Mat4 (CPU side)
-            @ptrCast(&mvp),
+            @ptrCast(&projection),
+        );
+
+        gl.UniformMatrix4fv(
+            u_view_location,
+            1,
+            gl.TRUE, // alternatively you can transpose matrix by calling .transpose() on Mat4 (CPU side)
+            @ptrCast(&view),
+        );
+
+        gl.UniformMatrix4fv(
+            u_model_location,
+            1,
+            gl.TRUE, // alternatively you can transpose matrix by calling .transpose() on Mat4 (CPU side)
+            @ptrCast(&model),
         );
 
         // Bind the vertex array object, which contains the vertex buffer and its attributes
