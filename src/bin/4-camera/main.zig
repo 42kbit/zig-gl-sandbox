@@ -305,6 +305,8 @@ pub fn main() !void {
     if (u_model_location == -1) {
         @panic("uModel not found in shader");
     }
+
+    // since view space is right handed, the 3 moves camera backwards
     var camera_position = zm.Vec3f{
         0,
         0,
@@ -338,8 +340,8 @@ pub fn main() !void {
             100,
         );
 
-        // since opengl is right handed, and Z coordinate is flipped after projection matrix multiplication
-        // The "forward" vector is flipped, e.g to transform
+        // by convention in view space we use right handed coordinate system
+        // where you look towards -z
         const camera_target = camera_position + zm.Vec3f{ 0, 0, -1 };
         const camera_forward = zm.vec.normalize(camera_target - camera_position);
         const camera_right = zm.vec.normalize(
