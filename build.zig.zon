@@ -16,8 +16,8 @@
             .hash = "zigglgen-0.4.0-bmyqLX_gLQDFXilQ5VQ9fJeOHKU1RFrggOzRqTGBX79W",
         },
         .zm = .{
-            .url = "git+https://github.com/griush/zm?ref=0.3.0#24e788249dd2cb6ffca0f6e7873a893c38ca361d",
-            .hash = "zm-0.3.0-AAAAAK3MAADEAbWaf5pV0-9RZ1KT1IMdX-XotoQv60Rw",
+            .url = "git+https://github.com/targiz/zm?ref=0.3.1#13106af307d9cfadb40eb385a888d37094261f58",
+            .hash = "zm-0.3.0-AAAAACXZAAAiBl1zoSOeY3lJrpkvzzi9bftyIrpDB12F",
         },
     },
 

@@ -310,7 +310,7 @@ pub fn main() !void {
     var camera_position = zm.Vec3f{
         0,
         0,
-        3,
+        -3,
     };
 
     while (!glfw.windowShouldClose(window)) {
@@ -330,7 +330,7 @@ pub fn main() !void {
         var window_height: c_int = undefined;
         glfw.getWindowSize(window, &window_width, &window_height);
 
-        const projection = zm.Mat4f.perspective(
+        const projection = zm.Mat4f.perspectiveLHNO(
             std.math.degreesToRadians(45.0),
             @divFloor(
                 @as(f32, @floatFromInt(window_width)),
@@ -342,32 +342,35 @@ pub fn main() !void {
 
         // by convention in view space we use right handed coordinate system
         // where you look towards -z
-        const camera_target = camera_position + zm.Vec3f{ 0, 0, -1 };
+        const camera_target = camera_position + zm.Vec3f{ 0, 0, 1 };
         const camera_forward = zm.vec.normalize(camera_target - camera_position);
         const camera_right = zm.vec.normalize(
-            zm.vec.cross(camera_forward, zm.Vec3f{ 0, 1, 0 }),
+            zm.vec.cross(zm.Vec3f{ 0, 1, 0 }, camera_forward),
         );
-        const camera_up = zm.vec.cross(camera_right, camera_forward);
+        const camera_up = zm.vec.cross(camera_forward, camera_right);
+
+        std.debug.print("RIGHT {} | UP {} | FORWARD {}\n", .{ camera_right, camera_up, camera_forward });
+        std.debug.print("{}\n", .{camera_position});
 
         if (glfw.getKey(window, glfw.KeyD) == glfw.Press) {
-            camera_position += zm.vec.scale(camera_right, 0.01);
+            camera_position += zm.vec.scale(camera_right, 0.03);
         }
         if (glfw.getKey(window, glfw.KeyA) == glfw.Press) {
-            camera_position -= zm.vec.scale(camera_right, 0.01);
+            camera_position -= zm.vec.scale(camera_right, 0.03);
         }
         if (glfw.getKey(window, glfw.KeyW) == glfw.Press) {
-            camera_position += zm.vec.scale(camera_forward, 0.01);
+            camera_position += zm.vec.scale(camera_forward, 0.03);
         }
         if (glfw.getKey(window, glfw.KeyS) == glfw.Press) {
-            camera_position -= zm.vec.scale(camera_forward, 0.01);
+            camera_position -= zm.vec.scale(camera_forward, 0.03);
         }
         if (glfw.getKey(window, glfw.KeySpace) == glfw.Press) {
-            camera_position += zm.vec.scale(camera_up, 0.01);
+            camera_position += zm.vec.scale(camera_up, 0.03);
         }
         if (glfw.getKey(window, glfw.KeyLeftShift) == glfw.Press) {
-            camera_position -= zm.vec.scale(camera_up, 0.01);
+            camera_position -= zm.vec.scale(camera_up, 0.03);
         }
-        const view = zm.Mat4f.lookAt(
+        const view = zm.Mat4f.lookAtLH(
             camera_position,
             camera_position + camera_forward,
             zm.Vec3f{ 0, 1, 0 },
@@ -378,7 +381,7 @@ pub fn main() !void {
             .multiply(zm.Mat4f.translation(0, 0, 0))
             .multiply(zm.Mat4f.rotation(
                 zm.Vec3f{ 1, 0, 0 },
-                std.math.degreesToRadians(-45),
+                std.math.degreesToRadians(45),
             )).multiply(zm.Mat4f.scaling(0.75, 0.75, 1));
 
         gl.UniformMatrix4fv(
