@@ -306,7 +306,6 @@ pub fn main() !void {
         @panic("uModel not found in shader");
     }
 
-    // since view space is right handed, the 3 moves camera backwards
     var camera_position = zm.Vec3f{
         0,
         0,
