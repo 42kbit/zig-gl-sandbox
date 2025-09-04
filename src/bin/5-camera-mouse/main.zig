@@ -73,10 +73,32 @@ fn resize_callback(window: *glfw.Window, width: c_int, height: c_int) callconv(.
 }
 
 var mouse_pos = zm.Vec2{ 0, 0 };
+var old_mouse_pos = zm.Vec2{ 0, 0 };
+
+var is_first_mouse_input = true;
+
+// yaw and pitch in radians
+var pitch: f32 = 0;
+var yaw: f32 = std.math.degreesToRadians(-90); // same as 270
 
 fn cursor_pos_callback(window: *glfw.Window, xpos: f64, ypos: f64) callconv(.C) void {
     _ = window;
-    mouse_pos = .{ xpos, ypos };
+
+    // inverse ypos, since glfw inverses it
+
+    if (is_first_mouse_input) {
+        old_mouse_pos = .{ xpos, -ypos };
+        is_first_mouse_input = false;
+    }
+
+    old_mouse_pos = mouse_pos;
+    mouse_pos = .{ xpos, -ypos };
+
+    const mouse_delta_pixels = mouse_pos - old_mouse_pos;
+    const mouse_delta = zm.vec.scale(mouse_delta_pixels, 0.001);
+
+    yaw += @as(f32, @floatCast(mouse_delta[0]));
+    pitch += @as(f32, @floatCast(mouse_delta[1]));
 }
 
 pub fn main() !void {
@@ -323,18 +345,15 @@ pub fn main() !void {
         -3,
     };
 
-    var old_mouse_pos = zm.Vec2{ 0, 0 };
-    var mouse_delta = zm.Vec2{ 0, 0 };
-
-    // yaw and pitch in radians
-    var pitch: f32 = 0;
-    var yaw: f32 = std.math.degreesToRadians(-90); // same as 270
-
     while (!glfw.windowShouldClose(window)) {
         glfw.pollEvents();
 
-        mouse_delta = mouse_pos - old_mouse_pos;
-        old_mouse_pos = mouse_pos;
+        const mouse_delta = mouse_pos - old_mouse_pos;
+
+        std.debug.print("Mouse movement {}\n", .{mouse_delta});
+
+        // pitch += @as(f32, @floatCast(mouse_movement[0]));
+        // yaw += @as(f32, @floatCast(mouse_movement[1]));
 
         // since the rotations are clockwise, x should be flipped
         // note that in glfw the "y" is flipped
@@ -377,11 +396,12 @@ pub fn main() !void {
             100,
         );
 
-        const camera_direction = zm.Vec3f{
+        var camera_direction = zm.Vec3f{
             @cos(yaw) * @cos(pitch),
             @sin(pitch),
             -@sin(yaw) * @cos(pitch),
         };
+        camera_direction = zm.vec.normalize(camera_direction);
 
         std.debug.print(
             "Camera direction: {d:.2}, {d:.2}, {d:.2}\n",
