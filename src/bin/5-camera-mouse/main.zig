@@ -348,15 +348,6 @@ pub fn main() !void {
     while (!glfw.windowShouldClose(window)) {
         glfw.pollEvents();
 
-        const mouse_delta = mouse_pos - old_mouse_pos;
-
-        std.debug.print("Mouse movement {}\n", .{mouse_delta});
-
-        // pitch += @as(f32, @floatCast(mouse_movement[0]));
-        // yaw += @as(f32, @floatCast(mouse_movement[1]));
-
-        // since the rotations are clockwise, x should be flipped
-        // note that in glfw the "y" is flipped
         if (glfw.getKey(window, glfw.KeyUp) == glfw.Press) {
             pitch += 0.01;
         }
